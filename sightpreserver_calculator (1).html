@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SightPreserver — Myopia Risk Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f7f6f3; --bg2:#eeede9; --bg3:#e4e3de;
+  --card:#ffffff; --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.16);
+  --teal:#0a8a62; --teal-l:#e0f5ed; --teal-m:rgba(10,138,98,0.25);
+  --red:#b91c1c; --red-l:#fee2e2; --red-m:rgba(185,28,28,0.25);
+  --amber:#92400e; --amber-l:#fef3c7;
+  --blue:#1d4ed8; --blue-l:#dbeafe;
+  --purple:#5b21b6; --purple-l:#ede9fe;
+  --text:#111827; --muted:#6b7280; --hint:#9ca3af;
+  --serif:'DM Serif Display',serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg2);}::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px;}
+
+/* -- NAV -- */
+nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 3rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.nav-brand{font-family:var(--serif);font-size:16px;color:var(--teal);display:flex;align-items:center;gap:8px;}
+.nav-brand::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--teal);display:block;}
+.nav-sub{font-family:var(--mono);font-size:10px;color:var(--muted);padding:3px 10px;background:var(--bg2);border-radius:20px;border:1px solid var(--border2);}
+
+/* -- LAYOUT -- */
+.main{max-width:820px;margin:1.5rem auto;padding:0 1.5rem;}
+.form-col{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem 2rem;margin-bottom:1.5rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 2rem;}
+.form-grid-full{grid-column:1/-1;}
+.results-col{display:flex;flex-direction:column;gap:1.5rem;}
+
+/* -- FORM -- */
+.form-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.form-header h2{font-family:var(--serif);font-size:1.2rem;color:var(--teal);margin:0;}
+.form-header .form-badge{font-family:var(--mono);font-size:9px;color:var(--muted);padding:3px 10px;background:var(--bg2);border-radius:20px;border:1px solid var(--border2);}
+.form-section{margin-bottom:1rem;}
+.form-section-title{font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:.6rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);}
+.field{margin-bottom:.6rem;}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text);margin-bottom:.25rem;}
+.field .hint{font-size:10px;color:var(--hint);margin-top:1px;}
+.field input[type=number],.field select{width:100%;padding:6px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--sans);font-size:13px;background:var(--card);color:var(--text);outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus{border-color:var(--teal);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.toggle-row{display:flex;gap:6px;flex-wrap:wrap;}
+.toggle{padding:5px 12px;border-radius:7px;border:1px solid var(--border2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);}
+.toggle:hover{border-color:var(--teal);color:var(--teal);}
+.toggle.active-yes{background:var(--red-l);border-color:var(--red);color:var(--red);}
+.toggle.active-no{background:var(--teal-l);border-color:var(--teal);color:var(--teal);}
+
+.form-bottom{grid-column:1/-1;display:flex;align-items:center;gap:1rem;margin-top:.5rem;}
+.calc-btn{flex:1;padding:12px;border-radius:10px;background:var(--teal);color:#fff;font-family:var(--sans);font-size:14px;font-weight:600;border:none;cursor:pointer;transition:all .15s;}
+.calc-btn:hover{background:#0d6b50;transform:translateY(-1px);}
+.calc-btn:active{transform:none;}
+
+.model-note{font-size:9px;color:var(--hint);line-height:1.4;flex:1;text-align:right;}
+
+/* -- RESULTS -- */
+.result-hero{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;display:none;}
+.result-hero.visible{display:block;}
+.rh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;}
+.rh-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.3rem;}
+.rh-big{font-family:var(--serif);font-size:2.8rem;line-height:1;}
+.rh-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.rh-secondary{text-align:right;}
+.rh-secondary .rh-big{font-size:1.6rem;color:var(--muted);}
+.risk-gauge{flex:1;max-width:200px;}
+.gauge-track{height:10px;background:var(--bg2);border-radius:99px;overflow:hidden;margin-top:6px;border:1px solid var(--border);}
+.gauge-fill{height:100%;border-radius:99px;transition:width .6s ease;}
+.risk-factors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:1rem;}
+.rf-card{background:var(--bg2);border-radius:8px;padding:8px 10px;text-align:center;}
+.rf-val{font-family:var(--serif);font-size:1.2rem;line-height:1;margin-bottom:2px;}
+.rf-lbl{font-size:10px;color:var(--muted);}
+.rf-lbl-hint{font-size:9px;color:var(--hint);margin-top:1px;}
+.result-message{padding:1rem 1.25rem;border-radius:10px;font-size:13px;line-height:1.7;margin-top:1rem;border-left:3px solid;}
+.result-message ul{margin:0.5rem 0 0 1.2rem;padding:0;}
+.result-message li{margin-bottom:0.35rem;}
+.rm-high{background:var(--red-l);border-color:var(--red);color:#7f1d1d;}
+.rm-med{background:var(--amber-l);border-color:var(--amber);color:#78350f;}
+.rm-low{background:var(--teal-l);border-color:var(--teal);color:#064e3b;}
+
+/* -- CHART CARDS -- */
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cc-head{padding:1.25rem 1.5rem .75rem;}
+.cc-title{font-size:13px;font-weight:600;}
+.cc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.cc-body{padding:0 1.5rem 1.25rem;}
+.ch-wrap{position:relative;width:100%;}
+.cc-insight{border-top:1px solid var(--border);padding:.9rem 1.5rem;background:var(--bg);font-size:12px;color:var(--muted);line-height:1.65;}
+.cc-insight strong{color:var(--text);}
+
+.legend-row{display:flex;gap:12px;flex-wrap:wrap;padding:.5rem 1.5rem;}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono);}
+.ld{width:16px;height:3px;border-radius:2px;}
+
+/* -- SCENARIO CARDS -- */
+.scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 1.5rem 1.25rem;}
+.sc{text-align:center;padding:10px 6px;border-radius:10px;border:1px solid var(--border);}
+.sc-label{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;line-height:1.3;}
+.sc-val{font-family:var(--serif);font-size:1.3rem;line-height:1;}
+.sc-rate{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px;}
+.sc-best{border:2px solid var(--teal);background:rgba(10,138,98,0.06);}
+
+/* -- TRADEOFF TABLE -- */
+.tradeoff-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tradeoff-tbl th{text-align:left;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 8px;border-bottom:2px solid var(--border);font-weight:500;}
+.tradeoff-tbl td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top;}
+.tradeoff-tbl tr:last-child td{border-bottom:none;}
+.tt-action{font-weight:600;color:var(--text);}
+.tt-or{color:var(--hint);font-family:var(--mono);font-size:10px;text-align:center;padding:4px 8px;}
+.tt-saves{font-family:var(--mono);font-weight:500;}
+.tt-saves-good{color:var(--teal);}
+.tt-saves-great{color:#0d6b50;font-weight:600;}
+.tt-equiv{color:var(--blue);font-size:11px;}
+.tt-row-highlight{background:var(--teal-l);}
+.tt-icon{display:inline-block;width:16px;text-align:center;margin-right:4px;}
+.tt-cantdo{background:var(--amber-l);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;line-height:1.6;color:#78350f;border-left:3px solid var(--amber);}
+.tt-cantdo strong{color:#92400e;}
+
+/* -- SLIDER SECTION -- */
+.slider-section{padding:1rem 1.5rem 1.25rem;}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.slider-row label{font-size:12px;color:var(--muted);width:120px;flex-shrink:0;}
+.slider-row input[type=range]{flex:1;}
+.slider-row .sv{font-family:var(--mono);font-size:12px;font-weight:500;width:50px;text-align:right;flex-shrink:0;}
+
+/* -- RESPONSIVE -- */
+@media(max-width:700px){
+  nav{padding:0 1rem;}
+  .main{padding:0 0.75rem;margin:1rem auto;}
+  .form-grid{grid-template-columns:1fr;}
+  .form-grid-full{grid-column:1;}
+  .form-bottom{flex-direction:column;}
+  .model-note{text-align:center;}
+  .risk-factors{grid-template-columns:repeat(2,1fr)!important;}
+  .scenarios{grid-template-columns:repeat(2,1fr);}
+  .rh-top{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">SightPreserver</div>
+  <div class="nav-sub">Myopia Progression Calculator</div>
+</nav>
+
+<div class="main">
+
+<!-- -- FORM -- -->
+<div class="form-col">
+  <div class="form-header">
+    <h2>Myopia Risk Calculator</h2>
+    <span class="form-badge">Orinda Study n=618 | Projection to age 18</span>
+  </div>
+  <div class="form-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="form-section">
+        <div class="form-section-title">About the child</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Age (years)</label>
+            <input type="number" id="f-age" min="4" max="17" value="8" placeholder="4-17">
+          </div>
+          <div class="field">
+            <label>Gender</label>
+            <select id="f-gender">
+              <option value="0">Male</option>
+              <option value="1">Female</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Weekly hours -- close-up activities</div>
+        <div class="field">
+          <label>Reading for pleasure (hrs/week)</label>
+          <input type="number" id="f-read" min="0" max="40" value="2" step="0.5">
+          <div class="hint">Books, comics, reading on tablet</div>
+        </div>
+        <div class="field">
+          <label>Screen time up close (hrs/week)</label>
+          <input type="number" id="f-comp" min="0" max="40" value="4" step="0.5">
+          <div class="hint">Phone, tablet, computer -- anything held close</div>
+        </div>
+        <div class="field">
+          <label>Studying outside school (hrs/week)</label>
+          <input type="number" id="f-study" min="0" max="40" value="1" step="0.5">
+          <div class="hint">Homework, tutoring, extra study</div>
+        </div>
+        <div class="field">
+          <label>TV watching (hrs/week)</label>
+          <input type="number" id="f-tv" min="0" max="50" value="5" step="0.5">
+          <div class="hint">Television at normal distance (1.5m+). Lower risk.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="form-section">
+        <div class="form-section-title">Outdoor & sport</div>
+        <div class="field">
+          <label>Outdoor play / sport (hrs/week)</label>
+          <input type="number" id="f-sport" min="0" max="80" value="10" step="0.5">
+          <div class="hint">Any outdoor activity -- sport, play, walking. Protective against myopia.</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Family history</div>
+        <div class="field">
+          <label>Mother has myopia?</label>
+          <div class="toggle-row">
+            <button class="toggle active-no" id="mom-no" onclick="setToggle('mom','no')">No</button>
+            <button class="toggle" id="mom-yes" onclick="setToggle('mom','yes')">Yes</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Father has myopia?</label>
+          <div class="toggle-row">
+            <button class="toggle active-no" id="dad-no" onclick="setToggle('dad','no')">No</button>
+            <button class="toggle" id="dad-yes" onclick="setToggle('dad','yes')">Yes</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Current vision</div>
+        <div class="field">
+          <label>Child currently has myopia?</label>
+          <div class="toggle-row">
+            <button class="toggle active-no" id="hm-no" onclick="setToggle('hm','no')">No</button>
+            <button class="toggle" id="hm-yes" onclick="setToggle('hm','yes')">Yes</button>
+          </div>
+        </div>
+        <div class="field" id="current-rx-field" style="display:none">
+          <label>Current prescription (e.g. -1.5)</label>
+          <input type="number" id="f-rx" min="-15" max="0" value="-1.0" step="0.25">
+          <div class="hint">Enter as negative, e.g. -1.5 for 1.5 D of myopia</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL WIDTH BOTTOM -->
+    <div class="form-bottom">
+      <button class="calc-btn" onclick="calculate()">Calculate risk & projection</button>
+      <div class="model-note">Random Forest model. For guidance only -- consult an eye care professional.</div>
+    </div>
+
+  </div><!-- /form-grid -->
+</div>
+
+<!-- -- RESULTS -- -->
+<div class="results-col">
+
+  <!-- RESULT CARD -->
+  <div class="result-hero" id="result-card">
+    <div class="rh-top">
+      <div>
+        <div class="rh-label" id="rh-label-top">Projected prescription at age 18</div>
+        <div class="rh-big" id="rh-big">--</div>
+        <div class="rh-sub" id="rh-sub">--</div>
+      </div>
+      <div class="rh-secondary" id="rh-current-block" style="display:none;">
+        <div class="rh-label">Current Rx</div>
+        <div class="rh-big" id="rh-current">--</div>
+      </div>
+      <div class="risk-gauge">
+        <div class="rh-label">Progression risk</div>
+        <div class="gauge-track"><div class="gauge-fill" id="gauge-fill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--hint);margin-top:4px"><span>Low</span><span>High</span></div>
+      </div>
+    </div>
+    <div class="risk-factors" style="grid-template-columns:repeat(4,1fr);">
+      <div class="rf-card">
+        <div class="rf-val" id="rf-da" style="color:var(--teal)">--</div>
+        <div class="rf-lbl">DA Score</div>
+        <div class="rf-lbl-hint">dopamine-weighted hrs</div>
+      </div>
+      <div class="rf-card">
+        <div class="rf-val" id="rf-outdoor">--</div>
+        <div class="rf-lbl">Outdoor hrs/wk</div>
+        <div class="rf-lbl-hint">total (raw)</div>
+      </div>
+      <div class="rf-card">
+        <div class="rf-val" id="rf-closeup">--</div>
+        <div class="rf-lbl">Close-up hrs/wk</div>
+        <div class="rf-lbl-hint">all near activities</div>
+      </div>
+      <div class="rf-card">
+        <div class="rf-val" id="rf-ratio">--</div>
+        <div class="rf-lbl">DA / Close-up</div>
+        <div class="rf-lbl-hint">higher is better</div>
+      </div>
+    </div>
+    <div class="result-message" id="result-message"></div>
+  </div>
+
+  <!-- TRADEOFF TABLE -->
+  <div class="chart-card" id="tradeoff-card" style="display:none">
+    <div class="cc-head">
+      <div class="cc-title">Personalized habit tradeoffs -- what equals what for your child</div>
+      <div class="cc-sub">Each row shows an equivalent change that produces the same improvement in projected Rx at age 18. Based on your child's current profile.</div>
+    </div>
+    <div id="tradeoff-table" style="padding:0 1.5rem 1.25rem;"></div>
+    <div class="cc-insight" id="tradeoff-insight"></div>
+  </div>
+
+  <!-- GROWTH CHART -->
+  <div class="chart-card" id="growth-card" style="display:none">
+    <div class="cc-head">
+      <div class="cc-title">Myopia progression to age 18 -- behavioral scenarios</div>
+      <div class="cc-sub">Higher = stronger prescription. Each colored line shows a different habit change. The green "optimal" line is the recommended target.</div>
+    </div>
+    <div class="legend-row" id="growth-legend"></div>
+    <div class="cc-body"><div class="ch-wrap" style="height:340px"><canvas id="growthChart"></canvas></div></div>
+    <div class="scenarios" id="scenarios-grid"></div>
+    <div class="cc-insight" id="growth-insight"></div>
+  </div>
+
+  <!-- SENSITIVITY CHART -->
+  <div class="chart-card" id="sensitivity-card" style="display:none">
+    <div class="cc-head">
+      <div class="cc-title">Interactive tradeoff explorer -- outdoor time vs. close-up work</div>
+      <div class="cc-sub">Drag one slider and watch the other adjust to show equivalent tradeoffs. The chart shows what happens to the prescription trajectory.</div>
+    </div>
+    <div class="slider-section">
+      <div class="slider-row">
+        <label>DA-weighted outdoor</label>
+        <input type="range" id="sl-sport" min="0" max="40" step="1" value="10" oninput="updateSliders('sport')">
+        <span class="sv" id="sv-sport">10</span>
+      </div>
+      <div class="slider-row">
+        <label>Close-up hrs/week</label>
+        <input type="range" id="sl-near" min="1" max="55" step="1" value="12" oninput="updateSliders('near')">
+        <span class="sv" id="sv-near">12</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;flex-wrap:wrap;gap:6px;">
+        <span style="font-size:12px;color:var(--muted)">DA/Close-up ratio: <strong id="budget-display" style="color:var(--teal)">--</strong></span>
+        <span style="font-size:12px;color:var(--muted)">Projected at 18: <strong id="proj18-display" style="color:var(--teal)">--</strong></span>
+      </div>
+      <div id="tradeoff-readout" style="margin-top:8px;padding:8px 10px;background:var(--blue-l);border-radius:8px;font-size:11px;color:#1e3a5f;line-height:1.5;display:none;"></div>
+    </div>
+    <div class="cc-body"><div class="ch-wrap" style="height:300px"><canvas id="sensitivityChart"></canvas></div></div>
+    <div class="cc-insight" id="sensitivity-insight"></div>
+  </div>
+
+</div><!-- /results-col -->
+</div><!-- /main -->
+
+<script>
+// -- EMBEDDED RANDOM FOREST (40 trees, depth 5, trained on Orinda dataset) --
+// Feature order: [age, gender_bin, sporthr, readhr, comphr, studyhr, tvhr, diopterhr, myopia_budget, mommy_bin, dadmy_bin, parent_score]
+const RF_TREES = [[8,3.2429,[5,3.5,[1,0.5,[10,0.5,[0,7.5,0.3657,0.6686],[6,3.5,0.8518,0.5604]],[6,19.5,[6,1.5,0.4594,0.1474],0.6745]],[1,0.5,0.0,0.9431]],[3,0.5,0.0,0.0]],[2,55.5,[8,0.8048,[10,0.5,[9,0.5,[2,6.5,0.1957,0.7047],[2,6.5,0.4668,0.7548]],[11,1.5,[2,3.5,0.461,0.8116],[7,28.5,0.3623,0.9521]]],[5,2.5,[2,41.5,[7,3.5,0.1971,0.0],[8,2.0445,0.671,0.3761]],0.8227]],[3,0.5,0.0,0.0]],[4,0.5,[8,1.7771,[7,24.5,[7,11.5,[8,0.9545,0.0,0.3065],[2,20.0,0.2096,0.7068]],[6,2.5,[3,1.5,0.6545,0.8689],[7,31.5,0.0,0.6654]]],[6,14.5,[11,0.5,0.0,0.0],0.3214]],[10,0.5,[8,0.5233,[6,4.5,[7,28.5,0.0,0.7991],0.7764],[6,0.5,0.387,[4,1.5,0.0,0.0]]],[3,2.5,[1,0.5,0.293,0.7319],0.8256]]],[2,55.5,[7,22.5,[8,0.0801,0.0,[11,1.5,[7,2.5,0.0,0.3588],0.8194]],[7,39.5,[7,27.5,[11,0.5,0.0,0.7158],[11,0.5,0.3214,0.8298]],0.9912]],[4,0.5,0.0,0.0]],[11,1.5,[8,2.3385,[7,35.5,[6,23.5,[6,7.5,0.397,0.0966],0.671],0.9197],[8,5.5,[11,0.5,0.0,0.0],[3,0.5,0.2806,0.0]]],[0,6.5,[3,0.5,0.6122,0.8308],0.5957]],[7,22.5,[7,17.5,[4,4.5,[5,2.5,[1,0.5,0.1059,0.0],0.2032],0.3761],[3,2.5,[2,6.5,[1,0.5,0.293,0.0],[8,0.9273,0.7362,0.3466]],0.0]],[6,11.5,[10,0.5,[11,0.5,0.1485,[7,28.5,0.6387,0.7783]],[2,2.0,0.5466,[1,0.5,0.9419,0.7991]]],0.4864]],[7,23.5,[11,1.5,[8,0.3787,[6,8.5,[5,0.5,0.0,0.0],[6,16.0,0.2316,0.4532]],[4,2.5,[5,0.5,0.3451,0.0],[8,1.0794,0.6439,0.4986]]],[2,3.5,0.7508,0.4692]],[7,39.5,[10,0.5,[9,0.5,[6,1.5,0.0,0.411],0.749],[3,2.5,[1,0.5,0.7131,0.917],0.4692]],0.9676]],[2,54.5,[11,1.5,[4,0.5,[7,24.5,[7,8.5,0.0,0.2185],[6,0.5,0.7508,0.5088]],[0,7.5,[8,0.7857,0.6574,0.2729],0.1762]],[7,28.5,[8,0.5963,[8,0.2042,0.6094,0.0],0.8818],0.917]],[7,8.5,0.0,0.0]],[7,21.5,[0,6.5,[8,2.1597,[10,0.5,[9,0.5,0.3957,0.3815],[3,1.5,0.562,0.2587]],[4,0.5,0.0,0.0]],[9,0.5,[7,19.5,[7,2.5,0.0,0.0],0.249],[3,0.5,0.2316,0.2806]]],[10,0.5,[7,35.5,[2,1.5,0.0,[6,2.5,0.1555,0.5249]],0.948],[11,1.5,[6,2.5,0.7991,0.8883],[1,0.5,0.7912,0.7682]]]],[10,0.5,[6,1.5,[4,0.5,[3,2.5,[3,0.5,0.115,0.1762],0.0],[4,3.5,[3,1.5,0.3623,0.0],0.0]],[6,27.0,[2,53.0,[1,0.5,0.5105,0.2649],0.0],0.7865]],[8,2.3068,[7,19.5,[3,0.5,0.0,0.4864],[8,0.6951,[7,33.5,0.5927,0.948],0.9299]],0.0]],[0,5.5,0.0,[7,24.5,[11,1.5,[8,3.0333,[8,1.9158,0.2114,0.6237],0.0],[8,0.4495,0.3657,0.853]],[8,0.7741,[7,31.5,[11,0.5,0.0,0.7853],[6,0.5,0.9676,0.8757]],0.5701]]],[11,0.5,[1,0.5,[8,0.9273,[8,0.3252,[3,0.5,0.3293,0.0],0.6686],[7,11.5,0.0,0.0]],[6,13.5,[6,0.5,0.0,0.0],0.3761]],[8,0.8048,[7,27.5,[2,12.5,[6,0.5,0.126,0.4353],0.6545],[7,35.5,[7,29.5,0.9004,0.81],1.0]],[10,0.5,[0,6.5,0.0,[2,36.5,0.0,0.4864]],[8,1.2976,0.0,[2,42.0,0.387,0.6988]]]]],[11,0.5,[7,30.5,[0,6.5,[2,13.5,[7,16.5,0.0,0.1762],[2,42.5,0.6796,0.0]],0.0],0.8155],[8,1.9783,[7,21.5,[4,2.5,[7,12.5,0.3804,0.1453],0.6745],[5,0.5,[3,6.5,0.8923,0.9452],[5,1.5,0.3559,0.7834]]],[7,13.5,[6,0.5,0.0,0.0],0.2806]]],[7,19.5,[7,5.5,[8,1.375,[3,0.5,0.0,0.2806],[3,0.5,0.0,0.0]],[0,7.5,[5,2.5,[0,6.5,0.1477,0.4136],0.7262],[6,0.5,0.0,0.0]]],[4,0.5,[10,0.5,[6,1.5,0.0,[6,7.0,0.671,0.2806]],[8,0.2046,0.6237,0.811]],[11,0.5,[2,8.5,0.7812,0.3065],[6,2.5,[2,12.5,0.7822,0.9011],0.9431]]]],[7,31.5,[1,0.5,[7,22.5,[5,1.5,[6,2.5,0.1502,0.5284],[8,0.2517,0.0,0.0]],[10,0.5,0.2806,[2,5.0,0.7031,0.7865]]],[8,3.0333,[6,0.5,[5,1.5,0.3277,0.7912],[4,2.5,0.1502,0.5049]],0.0]],[4,0.5,[9,0.5,0.8805,0.8031],0.9403]],[7,21.5,[6,25.5,[5,4.5,[8,0.8167,[8,0.2583,0.1034,0.3822],[6,0.5,0.0995,0.0]],0.5392],0.6745],[7,39.5,[11,0.5,[1,0.5,0.4986,0.0],[9,0.5,[2,3.5,0.3987,0.9035],[8,0.1018,0.8326,0.5371]]],0.9738]],[9,0.5,[8,3.0333,[7,18.5,[8,1.2404,[6,15.5,0.0,0.6047],0.5011],[7,35.5,[1,0.5,0.7342,0.3484],0.9299]],0.0],[7,22.5,[7,8.5,0.0,[8,0.1484,0.0,[10,0.5,0.4068,0.7991]]],[0,6.5,[11,1.5,0.8326,0.8883],[6,0.5,0.8256,0.5392]]]],[9,0.5,[8,6.5833,[0,6.5,[2,6.5,[10,0.5,0.0,0.6303],[2,45.5,0.6988,0.0]],[5,0.5,[6,5.5,0.2316,0.0],[3,2.5,0.2164,0.6885]]],0.0],[2,1.5,[6,0.5,0.387,[6,3.5,0.8326,0.8549]],[6,14.0,[11,1.5,[5,0.5,0.4303,0.0],[6,1.5,0.9299,0.5542]],0.0]]],[2,55.5,[7,39.5,[7,5.5,[10,0.5,0.0,0.2032],[8,1.6235,[11,0.5,0.2118,0.5738],[7,17.5,0.5869,0.8984]]],0.9876],[1,0.5,0.0,0.0]],[8,2.1548,[8,0.4641,[7,26.5,[6,14.5,[4,4.0,0.2753,0.0],0.7682],[1,0.5,[9,0.5,0.8211,0.8901],[2,3.5,0.6545,0.5114]]],[8,0.7351,[2,16.5,[8,0.5266,0.6237,0.0],0.9893],[4,1.5,[11,0.5,0.387,0.6336],0.7262]]],[6,13.5,[6,0.5,[1,0.5,0.3214,0.0],[1,0.5,0.0,0.0]],0.3065]],[7,22.5,[3,1.5,[7,19.5,[7,6.5,[7,4.5,0.0,0.7795],[7,11.5,0.0,0.1971]],[10,0.5,0.5392,0.6885]],[10,0.5,0.0,[6,1.5,0.5049,0.0]]],[9,0.5,[4,2.5,[3,0.5,0.4334,[6,2.5,0.7397,0.917]],0.3559],[11,1.5,[6,1.5,0.7262,0.8936],[1,0.5,0.802,0.8414]]]],[11,0.5,[1,0.5,[7,27.5,[2,36.5,[2,0.5,0.411,0.098],0.5049],0.7991],[2,14.5,0.0,0.3815]],[11,1.5,[4,0.5,[8,0.8444,[9,0.5,0.5498,0.5302],[8,1.2639,0.2806,0.0]],[7,19.5,[4,2.5,0.0,0.671],[6,1.5,0.8194,0.9111]]],[2,1.5,0.58,[3,0.5,0.7865,0.9038]]]],[10,0.5,[8,0.5233,[7,26.5,[1,0.5,[8,0.3095,0.0,0.7436],0.0],[9,0.5,0.6745,[8,0.0678,0.9045,0.7068]]],[7,24.5,[0,6.5,[6,2.5,0.0,0.1555],[9,0.5,0.0,0.0]],[8,1.3113,0.5957,0.3761]]],[7,6.5,0.0,[6,1.5,[11,1.5,[4,0.5,0.8155,0.5392],0.8341],[3,4.5,[9,0.5,0.5772,0.7783],0.2587]]]],[7,22.5,[6,25.5,[3,1.5,[6,13.5,[7,15.5,0.1562,0.4166],0.0],[10,0.5,[0,6.5,0.0,0.0],[1,0.5,0.2587,0.2032]]],0.6745],[11,0.5,[0,6.5,0.181,0.7912],[6,10.5,[3,5.5,[6,2.5,0.7812,0.8481],0.9431],0.4864]]],[7,21.5,[1,0.5,[10,0.5,[7,14.5,[3,0.5,0.1093,0.0],[8,0.5119,0.461,0.2032]],[3,0.5,0.6011,0.2399]],[5,2.5,[11,0.5,0.0,[8,0.7573,0.2164,0.0]],0.5049]],[11,0.5,[4,1.5,[7,30.5,0.0,0.8326],0.0],[6,3.5,[10,0.5,0.6591,[8,0.0817,0.7508,0.8847]],[7,27.5,0.0,[7,34.5,0.8376,0.671]]]]],[9,0.5,[4,3.5,[10,0.5,[7,33.0,[3,2.5,0.2399,0.0],0.8855],[7,21.5,[7,3.5,0.4864,0.0888],[2,5.5,0.6885,0.9249]]],0.0],[4,0.5,[8,1.794,[11,1.5,[7,24.5,0.4311,0.7319],0.7418],0.0],[8,0.8952,[6,2.5,0.8155,0.6654],0.387]]],[11,0.5,[2,4.5,0.0,[6,5.5,[2,42.5,[5,0.5,0.4411,0.7183],0.0],0.0]],[3,14.0,[7,20.5,[2,4.5,[8,0.0694,0.0,0.4924],0.0],[3,7.5,[9,0.5,0.7898,0.8043],0.9086]],0.0]],[3,15.5,[0,5.5,0.0,[2,27.5,[4,0.5,[8,0.8074,0.5687,0.0],[2,16.5,0.6493,0.8326]],[2,54.5,[8,2.3068,0.4924,0.0],0.0]]],0.0],[11,0.5,[6,20.5,[8,0.2323,0.0,[6,5.5,[7,5.5,0.0,0.5067],[3,1.5,0.0,0.2806]]],0.7466],[10,0.5,[8,0.8286,[8,0.5119,[7,26.5,0.1026,0.8211],0.7991],[0,6.5,[2,15.5,0.0,0.0],0.4532]],[8,1.9597,[1,0.5,[3,2.0,0.7429,0.8603],[8,0.2042,0.7524,0.5647]],0.0]]],[7,22.5,[7,8.5,[6,1.5,[3,5.0,0.0,0.4532],0.0],[7,9.5,0.7006,[5,0.5,[1,0.5,0.5597,0.2047],[6,4.5,0.2806,0.0]]]],[7,35.5,[11,0.5,0.0,[8,0.0161,0.8326,[3,0.5,0.6109,0.7627]]],0.9707]],[9,0.5,[11,0.5,[7,31.5,[6,18.5,[2,6.5,0.0,0.2767],0.6237],0.7262],[7,21.5,[4,2.5,[8,0.1032,0.3761,0.0],0.3377],[2,5.0,0.7537,0.9393]]],[4,3.5,[1,0.5,[2,0.5,0.8414,[7,8.5,0.0,0.6505]],[5,0.5,[7,13.0,0.0,0.6481],0.4334]],0.8361]],[9,0.5,[2,45.5,[7,29.5,[0,7.5,[3,0.5,0.4403,0.2587],0.0],[7,33.0,0.7865,0.8549]],0.0],[2,59.0,[7,22.5,[7,8.5,0.0,[8,0.0634,0.0,0.5249]],[11,1.5,[4,0.5,0.5826,0.8689],[2,8.5,0.8256,0.8689]]],0.0]],[10,0.5,[11,0.5,[4,1.5,[5,0.5,[3,1.5,0.0,0.293],[3,1.5,0.1363,0.6011]],[5,0.5,[4,3.5,0.2399,0.0],0.7682]],[8,0.8444,[8,0.0678,0.3293,[8,0.5445,0.6806,0.8031]],[7,7.5,0.0,0.0]]],[7,19.5,[11,1.5,[3,3.5,0.0,0.4532],0.6387],[7,28.5,[3,0.5,0.7602,0.4532],[5,0.5,[4,0.5,0.8689,0.9815],0.8984]]]],[10,0.5,[11,0.5,[2,4.5,[8,0.0132,[4,0.5,0.0,0.2806],[3,0.5,0.0,0.0]],[5,3.5,[4,0.5,0.2776,0.5434],0.7912]],[4,0.5,[7,24.5,[8,0.0917,0.2399,0.0],0.7885],[8,0.7351,[1,0.5,0.5604,0.8855],0.2238]]],[0,6.5,[7,22.0,[8,0.225,0.0,[1,0.5,0.2238,0.5511]],[6,0.5,0.9431,[3,0.5,0.7306,0.8619]]],[2,5.5,[8,0.1407,0.0,0.5249],0.4242]]],[1,0.5,[8,1.9783,[10,0.5,[6,16.0,[4,1.5,0.4242,0.7991],0.8326],[2,3.5,0.6465,0.8155]],[7,10.0,[0,6.5,0.2399,0.293],0.0]],[2,12.5,[11,0.5,0.0,[0,6.5,[3,0.5,0.0,0.3559],[8,0.09,0.7834,0.0]]],[8,2.2917,[9,0.5,[10,0.5,0.6988,0.5249],0.81],[2,32.5,0.2806,0.0]]]],[2,55.5,[4,0.5,[6,15.5,[7,22.5,[0,7.5,0.2286,0.0],[7,31.5,0.657,0.9086]],[2,20.0,0.0,0.5049]],[11,1.5,[7,18.5,[7,7.5,0.4456,0.0774],[10,0.5,0.764,0.8689]],[6,0.5,0.8901,0.7262]]],[11,0.5,0.0,0.0]],[10,0.5,[8,1.7771,[7,26.5,[4,2.5,[0,6.5,0.0515,0.3448],[6,1.5,0.5392,0.3657]],[8,0.0729,0.8689,[3,1.5,0.6122,0.8376]]],[11,0.5,[0,6.5,[1,0.5,0.0,0.5249],[8,3.086,0.0,0.0]],0.0]],[7,6.5,0.0,[6,1.5,[11,1.5,[4,0.5,0.8155,0.5392],0.8341],[3,4.5,[9,0.5,0.5772,0.7783],0.2587]]]],[7,27.5,[2,3.5,[2,0.5,[6,2.5,[11,0.5,0.0,0.0],0.4864],0.0],[6,7.5,[8,2.3939,[7,24.5,0.5326,0.0],[8,5.75,0.0,0.1555]],0.0]],[11,0.5,[7,33.0,0.0,0.7342],[4,0.5,[2,15.5,0.7262,0.9054],0.9086]]],[2,55.5,[8,1.9597,[10,0.5,[9,0.5,[8,1.2081,0.2019,0.4986],[7,31.5,0.4349,0.8901]],[2,22.0,[1,0.5,0.6925,0.4829],0.8984]],[1,0.5,[8,4.875,0.0,0.4692],[7,3.0,0.0,0.0]]],[9,0.5,0.0,0.0]]];
+
+// -- STATE --
+const state = {momMyopia:0, dadMyopia:0, hasMyo:0};
+
+function setToggle(key, val){
+  if(key==='mom'){state.momMyopia=(val==='yes'?1:0);document.getElementById('mom-yes').className='toggle'+(val==='yes'?' active-yes':'');document.getElementById('mom-no').className='toggle'+(val==='no'?' active-no':'');}
+  else if(key==='dad'){state.dadMyopia=(val==='yes'?1:0);document.getElementById('dad-yes').className='toggle'+(val==='yes'?' active-yes':'');document.getElementById('dad-no').className='toggle'+(val==='no'?' active-no':'');}
+  else if(key==='hm'){state.hasMyo=(val==='yes'?1:0);document.getElementById('hm-yes').className='toggle'+(val==='yes'?' active-yes':'');document.getElementById('hm-no').className='toggle'+(val==='no'?' active-no':'');document.getElementById('current-rx-field').style.display=val==='yes'?'block':'none';}
+}
+
+// -- RF PREDICTOR --
+function traverse(node, feats){
+  if(typeof node === 'number') return node;
+  const [fi, th, left, right] = node;
+  return traverse(feats[fi] <= th ? left : right, feats);
+}
+function rfPredict(feats){
+  const probs = RF_TREES.map(t => traverse(t, feats));
+  return probs.reduce((a,b)=>a+b,0) / probs.length;
+}
+
+function buildFeatures(age,genderBin,sporthr,readhr,comphr,studyhr,tvhr,momBin,dadBin){
+  const diop = readhr + comphr + studyhr + tvhr;
+  const budget = sporthr / (diop + 1);
+  const parent = momBin + dadBin;
+  return [age, genderBin, sporthr, readhr, comphr, studyhr, tvhr, diop, budget, momBin, dadBin, parent];
+}
+
+// -- PROGRESSION MODEL --
+function progressionRate(budget, age, parentScore){
+  let base = -0.50;
+  const budgetMod = Math.min(budget * 0.10, 0.30);
+  const ageMod = age <= 7 ? -0.06 : (age >= 14 ? 0.06 : 0);
+  const parentMod = -0.03 * parentScore;
+  const rate = base + budgetMod + ageMod + parentMod;
+  return Math.max(-0.55, Math.min(rate, -0.08));
+}
+
+function projectProgression(startAge, startRx, budget, parentScore, toAge){
+  const pts = [{age:startAge, rx:startRx}];
+  let rx = startRx;
+  for(let a = startAge+1; a <= toAge; a++){
+    const rate = progressionRate(budget, a, parentScore);
+    // Plateau: progression slows drastically after 16
+    let effectiveRate = rate;
+    if(a >= 16) effectiveRate = rate * (a === 16 ? 0.4 : (a === 17 ? 0.15 : 0.05));
+    rx = Math.max(rx + effectiveRate, -12);
+    pts.push({age:a, rx:Math.round(rx*100)/100});
+  }
+  return pts;
+}
+
+// -- 6 SCENARIOS --
+const SCENARIOS = [
+  {label:'Current habits',             color:'#b91c1c'},
+  {label:'+30 min outdoor/day',        color:'#dc6b09'},
+  {label:'+60 min outdoor/day',        color:'#ca8a04'},
+  {label:'+90 min outdoor/day',        color:'#1d4ed8'},
+  {label:'-2 hrs close-up/wk',         color:'#7c3aed'},
+  {label:'Optimal combo',              color:'#0a8a62'},
+];
+const COLORS = ['#b91c1c','#dc6b09','#ca8a04','#1d4ed8','#7c3aed','#0a8a62'];
+
+// -- CHARTS --
+const charts = {};
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id).getContext('2d'),cfg);return charts[id];}
+
+// -- Safe DOM text setter --
+function setText(id, text){ document.getElementById(id).textContent = text; }
+
+// -- DA% COMPUTATION (Cohen et al., Exp Eye Res 2012) --
+// DA% = max(0, (log10(lux) - 1.699) / 2.301) * 100, capped at 100
+// Typical lux: bright sun 100000, overcast 10000, dappled/trees 5000, covered porch 2000
+// Running through trees gets a flicker bonus (Lan et al., PLoS One 2014)
+var DA_WEIGHTS = {
+  sun:    1.00,   // 100k lux -> DA%=100
+  shade:  0.82,   // 10k lux  -> DA%=82
+  flicker:0.85,   // 5k lux   -> DA%=73 + ~12% flicker bonus = ~85
+  porch:  0.57    // 2k lux   -> DA%=57
+};
+
+function computeDA(sunHr, shadeHr, flickerHr, porchHr){
+  // DA-weighted hours per week
+  return sunHr * DA_WEIGHTS.sun + shadeHr * DA_WEIGHTS.shade
+       + flickerHr * DA_WEIGHTS.flicker + porchHr * DA_WEIGHTS.porch;
+}
+
+// -- MAIN CALCULATE --
+function calculate(){
+  const age     = parseInt(document.getElementById('f-age').value)||8;
+  const gender  = parseInt(document.getElementById('f-gender').value);
+  const readhr  = parseFloat(document.getElementById('f-read').value)||0;
+  const comphr  = parseFloat(document.getElementById('f-comp').value)||0;
+  const studyhr = parseFloat(document.getElementById('f-study').value)||0;
+  const tvhr    = parseFloat(document.getElementById('f-tv').value)||0;
+  const sporthr = parseFloat(document.getElementById('f-sport').value)||0;
+  // DA score: assume average outdoor mix (~80% DA efficiency per Cohen et al. 2012)
+  const daScore = sporthr * 0.80;
+  const momBin  = state.momMyopia;
+  const dadBin  = state.dadMyopia;
+  const hasMyo  = state.hasMyo;
+  const currRx  = hasMyo ? (parseFloat(document.getElementById('f-rx').value)||0) : 0;
+
+  const diop   = readhr + comphr + studyhr + tvhr;
+  const budget = daScore / (diop + 1);  // use DA-weighted hours for the ratio
+  const parent = momBin + dadBin;
+  const feats  = buildFeatures(age, gender, sporthr, readhr, comphr, studyhr, tvhr, momBin, dadBin);
+  const riskProb = rfPredict(feats);
+
+  // -- Show result card --
+  const rc = document.getElementById('result-card');
+  rc.classList.add('visible');
+  setTimeout(function(){ rc.scrollIntoView({behavior:'smooth', block:'start'}); }, 100);
+
+  const riskPct = Math.round(riskProb*100);
+  const riskLevel = riskPct >= 35 ? 'high' : riskPct >= 18 ? 'medium' : 'low';
+  const gColor = riskLevel==='high'?'#b91c1c':riskLevel==='medium'?'#92400e':'#0a8a62';
+
+  document.getElementById('gauge-fill').style.width = riskPct+'%';
+  document.getElementById('gauge-fill').style.background = gColor;
+
+  // Info cards
+  setText('rf-da', daScore.toFixed(1));
+  document.getElementById('rf-da').style.color = daScore >= 10 ? '#0a8a62' : daScore >= 5 ? '#b45309' : '#b91c1c';
+  setText('rf-outdoor', sporthr.toFixed(0));
+  setText('rf-closeup', diop.toFixed(0));
+  setText('rf-ratio', budget.toFixed(2));
+
+  // Build scenarios to get projected Rx at 18
+  const startAge = Math.max(age, 4);
+  const startRx  = hasMyo ? currRx : 0;
+  const allAges = [];
+  for(let a = startAge; a <= 18; a++) allAges.push(a);
+
+  // 6 scenario budgets (DA-weighted)
+  // +30 min bright sun/day = +3.5 DA-hrs/wk, +60 = +7, +90 = +10.5
+  const budgets = [
+    budget,
+    budget + (3.5/(diop+1)),       // +30 min bright sun/day
+    budget + (7/(diop+1)),         // +60 min bright sun/day
+    budget + (10.5/(diop+1)),      // +90 min bright sun/day
+    (daScore)/(Math.max(diop-2,1)+1), // -2 hrs close-up/wk
+    Math.max((daScore+10.5)/(Math.max(diop-2,1)+1), 2.5), // optimal combo
+  ];
+
+  const scenarioLines = budgets.map(function(b){
+    if(hasMyo){
+      return projectProgression(startAge, startRx, b, parent, 18);
+    } else {
+      const onsetAge = Math.max(age, Math.round(8 + (1-riskProb)*4));
+      return allAges.map(function(a){
+        if(a < onsetAge) return {age:a, rx:0};
+        const prog = projectProgression(onsetAge, -0.25, b, parent, a);
+        return {age:a, rx:prog[prog.length-1].rx};
+      });
+    }
+  });
+
+  const at18 = scenarioLines.map(function(pts){
+    var p = pts.find(function(x){return x.age===18;}) || pts[pts.length-1];
+    return p ? p.rx : 0;
+  });
+  const currentAt18 = at18[0];
+  const optimalAt18 = at18[5];
+
+  // Find most impactful single factor
+  var diffs = [
+    {name:'add 30 min bright outdoor/day', save:Math.abs(at18[0]-at18[1])},
+    {name:'add 60 min bright outdoor/day', save:Math.abs(at18[0]-at18[2])},
+    {name:'add 90 min bright outdoor/day', save:Math.abs(at18[0]-at18[3])},
+    {name:'reduce close-up by 2 hrs/wk', save:Math.abs(at18[0]-at18[4])},
+  ];
+  diffs.sort(function(a,b){return b.save-a.save;});
+  var bestSingle = diffs[0];
+  var optimalSave = Math.abs(at18[0]-at18[5]);
+
+  // DA recommendation
+  var daTarget = 14; // ~2 hrs/day of high-DA outdoor
+  var daGap = Math.max(0, daTarget - daScore);
+  var daGapMins = Math.round(daGap / DA_WEIGHTS.sun * 60 / 7); // extra bright-sun mins/day needed
+
+  var rhBig = document.getElementById('rh-big');
+
+  if(hasMyo){
+    // ---- MYOPIC CHILD: hero = predicted Rx at 18 ----
+    setText('rh-label-top', 'Projected prescription at age 18');
+    rhBig.textContent = currentAt18.toFixed(1)+' D';
+    rhBig.style.color = currentAt18 < -5 ? '#b91c1c' : currentAt18 < -3 ? '#b45309' : '#0a8a62';
+    setText('rh-sub', 'With current habits. Could improve to '+optimalAt18.toFixed(1)+' D with optimal changes.');
+    document.getElementById('rh-current-block').style.display='block';
+    setText('rh-current', currRx.toFixed(1)+' D');
+  } else {
+    // ---- NON-MYOPIC CHILD: hero = risk % ----
+    setText('rh-label-top', 'Myopia development risk');
+    rhBig.textContent = riskPct+'%';
+    rhBig.style.color = gColor;
+    var onsetAge = Math.max(age, Math.round(8 + (1-riskProb)*4));
+    var onsetText = riskPct < 15 ? 'Low risk with current habits. Keep it up!'
+      : 'If myopia develops (est. onset ~age '+onsetAge+'), projected Rx at 18: '+currentAt18.toFixed(1)+' D. Preventable with changes below.';
+    setText('rh-sub', onsetText);
+    document.getElementById('rh-current-block').style.display='none';
+  }
+
+  // Build insight message using safe DOM methods
+  var msgEl = document.getElementById('result-message');
+  msgEl.className = 'result-message rm-'+riskLevel;
+  while(msgEl.firstChild) msgEl.removeChild(msgEl.firstChild);
+
+  var strong = document.createElement('strong');
+  strong.textContent = hasMyo ? 'Key findings:' : 'Risk assessment & what to do:';
+  msgEl.appendChild(strong);
+
+  var ul = document.createElement('ul');
+  var items = [];
+
+  if(hasMyo){
+    items.push('Predicted at 18: '+currentAt18.toFixed(1)+' D with current habits');
+    items.push('Best achievable: '+optimalAt18.toFixed(1)+' D with optimal changes ('+optimalSave.toFixed(1)+' D improvement)');
+    items.push('Most impactful change: '+bestSingle.name+' -- saves ~'+bestSingle.save.toFixed(1)+' D by age 18');
+  } else {
+    items.push('Risk score: '+riskPct+'% -- '+(riskLevel==='low'?'below average risk':'above average risk, action recommended'));
+    if(riskPct >= 15){
+      items.push('Estimated onset: around age '+Math.max(age, Math.round(8 + (1-riskProb)*4))+' if habits remain unchanged');
+      items.push('If onset occurs: projected Rx at 18 would be '+currentAt18.toFixed(1)+' D under current habits');
+      items.push('With optimal habits: could stay at '+optimalAt18.toFixed(1)+' D or prevent onset entirely');
+    } else {
+      items.push('Current habits are protective -- low likelihood of developing myopia');
+    }
+  }
+
+  // DA-specific insight
+  items.push('DA Score: '+daScore.toFixed(1)+' dopamine-weighted hrs/wk'+(daScore >= daTarget
+    ? ' (excellent -- meeting protective threshold)'
+    : ' (target: '+daTarget+'. Add ~'+daGapMins+' min/day of bright-sun outdoor to reach it)'));
+
+  if(budget < 1.0){
+    items.push('Alert: Close-up work ('+diop.toFixed(0)+' hrs/wk) outweighs DA-weighted outdoor time ('+daScore.toFixed(1)+' hrs/wk). Rebalancing is the top priority.');
+  }
+  if(parent > 0){
+    items.push('Family history: '+(parent===2?'Both parents':'One parent')+' myopic -- behavioral changes are even more important.');
+  }
+
+  // Actionable recommendations for non-myopic
+  if(!hasMyo && riskPct >= 15){
+    items.push('To reduce risk: increase bright outdoor time to 2+ hrs/day (DA score > 14), reduce close-up screen time below 8 hrs/wk');
+  }
+
+  items.forEach(function(txt){
+    var li = document.createElement('li');
+    var colonIdx = txt.indexOf(':');
+    if(colonIdx > 0 && colonIdx < 30){
+      var b = document.createElement('strong');
+      b.textContent = txt.substring(0, colonIdx+1);
+      li.appendChild(b);
+      li.appendChild(document.createTextNode(txt.substring(colonIdx+1)));
+    } else {
+      li.textContent = txt;
+    }
+    ul.appendChild(li);
+  });
+  msgEl.appendChild(ul);
+
+  // -- BUILD TRADEOFF TABLE --
+  // Probe the model: compute Rx at 18 for many habit combos to find equivalences
+  document.getElementById('tradeoff-card').style.display='block';
+
+  function probeAt18(extraDA, lessNear){
+    var probeBudget = (daScore + extraDA) / (Math.max(diop - lessNear, 0.5) + 1);
+    if(hasMyo){
+      var pts = projectProgression(startAge, startRx, probeBudget, parent, 18);
+      return pts[pts.length-1].rx;
+    } else {
+      var oAge = Math.max(age, Math.round(8 + (1-riskProb)*4));
+      if(18 < oAge) return 0;
+      var pts2 = projectProgression(oAge, -0.25, probeBudget, parent, 18);
+      return pts2[pts2.length-1].rx;
+    }
+  }
+
+  var baseRx18 = probeAt18(0, 0);
+
+  // Build tradeoff rows: outdoor add vs close-up reduce
+  // For each outdoor increment, find equivalent close-up reduction
+  var tradeoffs = [];
+
+  // Row 1: +30 min bright sun/day = +3.5 DA/wk. What close-up reduction = same?
+  var outdoor30save = Math.abs(baseRx18 - probeAt18(3.5, 0));
+  // Binary search: how many hrs close-up reduction to match
+  var lo=0, hi=diop, eqNear30=0;
+  for(var iter=0;iter<20;iter++){
+    var mid=(lo+hi)/2;
+    var s = Math.abs(baseRx18 - probeAt18(0, mid));
+    if(s < outdoor30save) lo=mid; else hi=mid;
+  }
+  eqNear30 = (lo+hi)/2;
+  tradeoffs.push({
+    outdoor:'+30 min bright sun/day (+3.5 DA-hrs/wk)',
+    near: '-'+eqNear30.toFixed(1)+' hrs close-up/wk',
+    save: outdoor30save
+  });
+
+  // Row 2: +60 min bright sun/day = +7 DA/wk
+  var outdoor60save = Math.abs(baseRx18 - probeAt18(7, 0));
+  lo=0; hi=diop;
+  for(iter=0;iter<20;iter++){
+    var mid2=(lo+hi)/2;
+    var s2 = Math.abs(baseRx18 - probeAt18(0, mid2));
+    if(s2 < outdoor60save) lo=mid2; else hi=mid2;
+  }
+  var eqNear60 = (lo+hi)/2;
+  tradeoffs.push({
+    outdoor:'+60 min bright sun/day (+7 DA-hrs/wk)',
+    near: '-'+eqNear60.toFixed(1)+' hrs close-up/wk',
+    save: outdoor60save
+  });
+
+  // Row 3: +90 min bright sun/day = +10.5 DA/wk
+  var outdoor90save = Math.abs(baseRx18 - probeAt18(10.5, 0));
+  lo=0; hi=diop;
+  for(iter=0;iter<20;iter++){
+    var mid3=(lo+hi)/2;
+    var s3 = Math.abs(baseRx18 - probeAt18(0, mid3));
+    if(s3 < outdoor90save) lo=mid3; else hi=mid3;
+  }
+  var eqNear90 = (lo+hi)/2;
+  tradeoffs.push({
+    outdoor:'+90 min bright sun/day (+10.5 DA-hrs/wk)',
+    near: '-'+eqNear90.toFixed(1)+' hrs close-up/wk',
+    save: outdoor90save
+  });
+
+  // Row 4: If can't go outside at all -- how much close-up reduction needed to match +60 min outdoor?
+  var cantOutdoorRow = {
+    label: 'Can\'t add outdoor time?',
+    reduce: eqNear60.toFixed(1),
+    save: outdoor60save,
+    perDay: (eqNear60/7*60).toFixed(0)
+  };
+
+  // Build table DOM
+  var ttDiv = document.getElementById('tradeoff-table');
+  while(ttDiv.firstChild) ttDiv.removeChild(ttDiv.firstChild);
+
+  var tbl = document.createElement('table');
+  tbl.className = 'tradeoff-tbl';
+
+  // Header
+  var thead = document.createElement('thead');
+  var hrow = document.createElement('tr');
+  ['Add outdoor time','OR reduce close-up work','Saves by age 18'].forEach(function(txt){
+    var th = document.createElement('th');
+    th.textContent = txt;
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  tbl.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  tradeoffs.forEach(function(row, idx){
+    var tr = document.createElement('tr');
+    if(idx === 2) tr.className = 'tt-row-highlight';
+
+    var td1 = document.createElement('td');
+    td1.className = 'tt-action';
+    td1.textContent = row.outdoor;
+    tr.appendChild(td1);
+
+    var td2 = document.createElement('td');
+    td2.className = 'tt-equiv';
+    td2.textContent = row.near;
+    tr.appendChild(td2);
+
+    var td3 = document.createElement('td');
+    td3.className = 'tt-saves '+(row.save >= 1.0 ? 'tt-saves-great' : 'tt-saves-good');
+    td3.textContent = row.save.toFixed(1)+' D';
+    tr.appendChild(td3);
+
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  ttDiv.appendChild(tbl);
+
+  // "Can't go outside" callout
+  var cantDiv = document.createElement('div');
+  cantDiv.className = 'tt-cantdo';
+  var cantStrong = document.createElement('strong');
+  cantStrong.textContent = 'If your child can\'t get more outdoor time: ';
+  cantDiv.appendChild(cantStrong);
+  cantDiv.appendChild(document.createTextNode(
+    'Reducing close-up work by '+cantOutdoorRow.reduce+' hrs/wk (~'+cantOutdoorRow.perDay+' min less per day) '
+    +'would partially compensate, saving ~'+cantOutdoorRow.save.toFixed(1)+' D by age 18. '
+    +'However, outdoor time is more effective -- 1 hr of bright sun provides the same protection as cutting ~'
+    +(eqNear30 > 0 ? (eqNear30/3.5*1).toFixed(1) : '2-3')+' hrs of close-up work.'
+  ));
+  ttDiv.appendChild(cantDiv);
+
+  // Tradeoff insight
+  var ti = document.getElementById('tradeoff-insight');
+  while(ti.firstChild) ti.removeChild(ti.firstChild);
+  var tiStrong = document.createElement('strong');
+  tiStrong.textContent = 'The exchange rate: ';
+  ti.appendChild(tiStrong);
+  var exchangeRate = eqNear30 > 0.1 ? (eqNear30 / (3.5/7*60)).toFixed(1) : '~2';
+  ti.appendChild(document.createTextNode(
+    'For this child, every 30 min of bright outdoor time (DA%=100%) is equivalent to cutting ~'
+    +eqNear30.toFixed(1)+' hrs/wk of close-up work. '
+    +'Outdoor light is '+exchangeRate+'x more efficient at protecting vision than reducing screen time alone. '
+    +'The best outcome combines both: the green "optimal" scenario in the chart below.'
+  ));
+
+  // -- BUILD GROWTH CHART (curves go UP = worse myopia, positive Y axis) --
+  document.getElementById('growth-card').style.display='block';
+  document.getElementById('sensitivity-card').style.display='block';
+
+  var datasets = scenarioLines.map(function(pts,i){
+    return {
+      label:SCENARIOS[i].label,
+      data:pts.map(function(p){return Math.abs(p.rx);}),
+      borderColor:COLORS[i],
+      backgroundColor:'transparent',
+      borderWidth:i===0?3:(i===5?3:2),
+      pointRadius:i===0?4:(i===5?3:1),
+      pointBackgroundColor:COLORS[i],
+      tension:0.3,
+      borderDash:i===0?[]:(i===5?[]:[5,4])
+    };
+  });
+
+  var maxRx = Math.max(Math.abs(at18[0])+1, 7);
+  var zonePlugin = {
+    id:'zones',
+    beforeDraw:function(chart){
+      var ctx=chart.ctx, chartArea=chart.chartArea, scales=chart.scales;
+      if(!chartArea) return;
+      var left=chartArea.left, right=chartArea.right, top=chartArea.top, bottom=chartArea.bottom;
+      var y0=scales.y.getPixelForValue(0);
+      var y3=scales.y.getPixelForValue(3);
+      var y6=scales.y.getPixelForValue(6);
+      ctx.save();
+      // Normal (0): green at bottom
+      if(y0 > top) ctx.fillStyle='rgba(220,252,231,0.3)', ctx.fillRect(left, Math.max(y0,top), right-left, bottom-Math.max(y0,top));
+      // Mild (0-3): yellow
+      if(y3 < bottom && y0 > top){
+        ctx.fillStyle='rgba(254,243,199,0.35)';
+        ctx.fillRect(left, Math.max(y3,top), right-left, Math.min(y0,bottom)-Math.max(y3,top));
+      }
+      // Moderate (3-6): orange
+      if(y6 < bottom && y3 > top){
+        ctx.fillStyle='rgba(254,226,226,0.35)';
+        ctx.fillRect(left, Math.max(y6,top), right-left, Math.min(y3,bottom)-Math.max(y6,top));
+      }
+      // High (6+): red
+      if(y6 > top){
+        ctx.fillStyle='rgba(185,28,28,0.12)';
+        ctx.fillRect(left, top, right-left, Math.min(y6,bottom)-top);
+      }
+      // Zone labels
+      ctx.font='10px DM Mono,monospace';ctx.fillStyle='rgba(0,0,0,0.35)';ctx.textAlign='left';
+      if(y0 > top+20 && y0 < bottom) ctx.fillText('Normal',left+6,Math.min(y0,bottom)-6);
+      if(y3 > top+20 && y3 < bottom) ctx.fillText('Mild myopia',left+6,y3-6);
+      if(y6 > top+20 && y6 < bottom) ctx.fillText('Moderate',left+6,y6-6);
+      var highLabelY = Math.max(top+14, y6+14);
+      if(highLabelY < y6 && highLabelY > top) ctx.fillText('High myopia (>6 D)',left+6,highLabelY);
+      else if(top+14 < y6) ctx.fillText('High myopia (>6 D)',left+6, top+14);
+      ctx.restore();
+    }
+  };
+
+  mkChart('growthChart',{type:'line',data:{labels:allAges,datasets:datasets},plugins:[zonePlugin],
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': -'+ctx.parsed.y.toFixed(2)+' D';}}}},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'Age (years)',color:'#6b7280',font:{size:11}}},
+        y:{min:0,max:Math.ceil(maxRx),ticks:{color:'#6b7280',font:{size:10},callback:function(v){return v.toFixed(1)+' D';}},grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'Myopia severity (diopters)',color:'#6b7280',font:{size:11}}}
+      }}});
+
+  // Legend
+  var leg=document.getElementById('growth-legend');
+  while(leg.firstChild) leg.removeChild(leg.firstChild);
+  SCENARIOS.forEach(function(s,i){
+    var div = document.createElement('div');
+    div.className = 'li';
+    var ld = document.createElement('div');
+    ld.className = 'ld';
+    ld.style.background = COLORS[i];
+    ld.style.opacity = (i===0||i===5) ? '1' : '0.7';
+    div.appendChild(ld);
+    div.appendChild(document.createTextNode(s.label));
+    leg.appendChild(div);
+  });
+
+  // Scenarios grid
+  var sg=document.getElementById('scenarios-grid');
+  while(sg.firstChild) sg.removeChild(sg.firstChild);
+  SCENARIOS.forEach(function(s,i){
+    var v=at18[i]; var col=COLORS[i];
+    var isBest = i===5;
+    var div = document.createElement('div');
+    div.className = isBest ? 'sc sc-best' : 'sc';
+    div.style.borderColor = col+'40';
+    div.style.background = i===0 ? 'rgba(185,28,28,0.08)' : (isBest ? 'rgba(10,138,98,0.08)' : 'rgba(0,0,0,0.03)');
+
+    var lbl = document.createElement('div');
+    lbl.className = 'sc-label';
+    lbl.style.color = col;
+    lbl.textContent = s.label;
+    div.appendChild(lbl);
+
+    var val = document.createElement('div');
+    val.className = 'sc-val';
+    val.style.color = col;
+    val.textContent = v.toFixed(1)+' D';
+    div.appendChild(val);
+
+    var rate = document.createElement('div');
+    rate.className = 'sc-rate';
+    rate.textContent = 'at age 18';
+    div.appendChild(rate);
+
+    sg.appendChild(div);
+  });
+
+  // Growth insight
+  var gi = document.getElementById('growth-insight');
+  while(gi.firstChild) gi.removeChild(gi.firstChild);
+  var giStrong = document.createElement('strong');
+  giStrong.textContent = 'Recommendation: ';
+  gi.appendChild(giStrong);
+  gi.appendChild(document.createTextNode(
+    'The optimal combination (green line) -- adding ~90 min bright outdoor daily (DA score +10.5) and reducing close-up screen time -- projects to '
+    +optimalAt18.toFixed(1)+' D at age 18 vs. '+currentAt18.toFixed(1)+' D with current habits. That\'s a '
+    +optimalSave.toFixed(1)+' diopter improvement. Current DA score: '+daScore.toFixed(1)+' (target: 14+). Each diopter avoided reduces lifetime retinal complication risk by ~40%.'
+  ));
+
+  // -- SENSITIVITY CHART --
+  origDA = Math.round(daScore);
+  origNear = diop;
+  document.getElementById('sl-sport').value = origDA;
+  document.getElementById('sl-near').value  = origNear;
+  updateSliders(null);
+}
+
+// -- SENSITIVITY SLIDERS --
+var origDA = 0, origNear = 0; // set by calculate()
+
+function updateSliders(changed){
+  var age     = parseInt(document.getElementById('f-age').value)||8;
+  var startRx = state.hasMyo ? (parseFloat(document.getElementById('f-rx').value)||0) : 0;
+  var hasMyo  = state.hasMyo;
+  var parent  = state.momMyopia + state.dadMyopia;
+  var startAge= Math.max(age,4);
+
+  var slSport = parseFloat(document.getElementById('sl-sport').value);
+  var slNear  = parseFloat(document.getElementById('sl-near').value);
+  setText('sv-sport', String(slSport));
+  setText('sv-near', String(slNear));
+
+  // Show tradeoff readout when sliders differ from original
+  var readout = document.getElementById('tradeoff-readout');
+  if(changed && (Math.abs(slSport - origDA) > 0.5 || Math.abs(slNear - origNear) > 0.5)){
+    readout.style.display = 'block';
+    var daDiff = slSport - origDA;
+    var nearDiff = slNear - origNear;
+    var parts = [];
+    if(Math.abs(daDiff) > 0.5){
+      parts.push((daDiff > 0 ? '+' : '') + daDiff.toFixed(0) + ' DA-hrs outdoor/wk');
+    }
+    if(Math.abs(nearDiff) > 0.5){
+      parts.push((nearDiff > 0 ? '+' : '') + nearDiff.toFixed(0) + ' hrs close-up/wk');
+    }
+    readout.textContent = 'Change from current: ' + parts.join(', ') + '. See how the black line shifts on the chart.';
+  } else {
+    readout.style.display = 'none';
+  }
+  var budget = slSport / (slNear + 1);
+  var budgetEl = document.getElementById('budget-display');
+  budgetEl.textContent = budget.toFixed(2);
+  budgetEl.style.color = budget >= 1.5 ? '#0a8a62' : budget >= 0.8 ? '#b45309' : '#b91c1c';
+
+  var allAges = [];
+  for(var a = startAge; a <= 18; a++) allAges.push(a);
+
+  // For RF model, approximate raw outdoor from DA-weighted (assume ~85% average DA weight)
+  var rawSportApprox = slSport / 0.85;
+  var riskProb = rfPredict(buildFeatures(age, parseInt(document.getElementById('f-gender').value),
+    rawSportApprox, parseFloat(document.getElementById('f-read').value)||0,
+    parseFloat(document.getElementById('f-comp').value)||0,
+    parseFloat(document.getElementById('f-study').value)||0,
+    parseFloat(document.getElementById('f-tv').value)||0,
+    state.momMyopia, state.dadMyopia));
+
+  var budgetScenarios = [
+    {b:0.08, label:'Ratio 0.1 (worst)', color:'rgba(185,28,28,0.9)', width:1.5},
+    {b:0.3,  label:'Ratio 0.3',         color:'rgba(185,28,28,0.6)', width:1.5},
+    {b:0.7,  label:'Ratio 0.7',         color:'rgba(180,83,9,0.8)',  width:1.5},
+    {b:1.2,  label:'Ratio 1.2',         color:'rgba(29,78,216,0.8)', width:1.5},
+    {b:2.0,  label:'Ratio 2.0',         color:'rgba(10,138,98,0.7)', width:1.5},
+    {b:3.5,  label:'Ratio 3.5 (best)',  color:'rgba(10,138,98,0.9)', width:2},
+  ];
+
+  var currentLine = {b:budget, label:'Your current settings', color:'#111827', width:3};
+  var allScenarios = budgetScenarios.concat([currentLine]);
+
+  var datasets = allScenarios.map(function(sc){
+    var pts;
+    if(hasMyo){
+      pts = projectProgression(startAge, startRx, sc.b, parent, 18);
+    } else {
+      var onsetAge = Math.max(startAge, Math.round(8 + (1-riskProb)*4));
+      pts = allAges.map(function(a2){
+        if(a2<onsetAge) return {age:a2,rx:0};
+        var p=projectProgression(onsetAge,-0.25,sc.b,parent,a2);
+        return {age:a2,rx:p[p.length-1].rx};
+      });
+    }
+    var at18val = (pts.find(function(p){return p.age===18;}) || pts[pts.length-1]).rx;
+    if(sc.label==='Your current settings'){
+      var projEl = document.getElementById('proj18-display');
+      projEl.textContent = at18val.toFixed(1)+' D';
+      projEl.style.color = at18val < -5 ? '#b91c1c' : at18val < -3 ? '#b45309' : '#0a8a62';
+    }
+    return {
+      label:sc.label,
+      data:pts.map(function(p){return Math.abs(p.rx);}),
+      borderColor:sc.color,
+      backgroundColor:'transparent',
+      borderWidth:sc.width,
+      pointRadius:sc.label==='Your current settings'?3:0,
+      tension:0.3
+    };
+  });
+
+  var maxVal = 3;
+  datasets.forEach(function(d){d.data.forEach(function(v){if(v>maxVal) maxVal=v;});});
+
+  mkChart('sensitivityChart',{type:'line',data:{labels:allAges,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': -'+ctx.parsed.y.toFixed(2)+' D';}}}},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'Age (years)',color:'#6b7280',font:{size:11}}},
+        y:{min:0,max:Math.ceil(maxVal+0.5),ticks:{color:'#6b7280',font:{size:10},callback:function(v){return v.toFixed(1)+' D';}},grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'Myopia severity (diopters)',color:'#6b7280',font:{size:11}}}
+      }}});
+
+  var si = document.getElementById('sensitivity-insight');
+  while(si.firstChild) si.removeChild(si.firstChild);
+  var siStrong = document.createElement('strong');
+  siStrong.textContent = 'DA-weighted outdoor hours account for light quality (Cohen et al. 2012). ';
+  si.appendChild(siStrong);
+  si.appendChild(document.createTextNode(
+    'Bright sun (100k lux) = 100% dopamine activation; overcast = 82%; running through trees = 85% (flicker bonus, Lan et al. 2014); covered porch = 57%. '
+    +'Your current DA/close-up ratio is '+budget.toFixed(2)+' (black line). Move sliders to see how changing habits shifts the trajectory. Target: DA score > 14 (green zone). All curves plateau after age 16 as eye growth stabilizes.'
+  ));
+}
+
+window.addEventListener('load', function(){});
+</script>
+</body>
+</html>
